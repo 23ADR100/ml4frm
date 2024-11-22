@@ -1,0 +1,239 @@
+import java.sql.*;
+import java.util.Scanner;
+
+
+class Drug {
+    private String drugID;
+    private String name;
+    private String type;
+    private int quantity;
+    private double price;
+
+    public Drug(String drugID, String name, String type, int quantity, double price) {
+        this.drugID = drugID;
+        this.name = name;
+        this.type = type;
+        this.quantity = quantity;
+        this.price = price;
+    }
+
+    
+    public String getDrugID() {
+        return drugID;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    // toString method to display drug details
+    @Override
+    public String toString() {
+        return "Drug ID: " + drugID + ", Name: " + name + ", Type: " + type +
+                ", Quantity: " + quantity + ", Price: $" + price;
+    }
+}
+
+class DrugManagementSystem {
+    private Connection connection;
+
+    public DrugManagementSystem() {
+        try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            // Connect to MySQL database
+            connection = DriverManager.getConnection(
+                    "jdbc:mysql://localhost:3306/maheshdb", "root", "Mahesh@1234");
+            System.out.println("Connected to the database successfully.");
+        } catch (SQLException e) {
+            System.out.println("Failed to connect to the database. Please check your database settings.");
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            System.out.println("MySQL JDBC Driver not found. Please add the JDBC driver to your classpath.");
+            e.printStackTrace();
+        }
+    }
+
+    // Method to check if the connection is active
+    private boolean isConnected() {
+        return connection != null;
+    }
+
+    // Add a new drug to the database
+    public void addDrug(Drug drug) {
+        if (!isConnected()) {
+            System.out.println("No database connection.");
+            return;
+        }
+        
+        String query = "INSERT INTO Drugs (drugID, name, type, quantity, price) VALUES (?, ?, ?, ?, ?)";
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, drug.getDrugID());
+            stmt.setString(2, drug.getName());
+            stmt.setString(3, drug.getType());
+            stmt.setInt(4, drug.getQuantity());
+            stmt.setDouble(5, drug.getPrice());
+            stmt.executeUpdate();
+            System.out.println("Drug added successfully.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // View all drugs from the database
+    public void viewDrugs() {
+        if (!isConnected()) {
+            System.out.println("No database connection.");
+            return;
+        }
+        
+        String query = "SELECT * FROM Drugs";
+        try (Statement stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(query)) {
+            if (!rs.isBeforeFirst()) {
+                System.out.println("No drugs available.");
+                return;
+            }
+            while (rs.next()) {
+                System.out.println("Drug ID: " + rs.getString("drugID") +
+                                   ", Name: " + rs.getString("name") +
+                                   ", Type: " + rs.getString("type") +
+                                   ", Quantity: " + rs.getInt("quantity") +
+                                   ", Price: $" + rs.getDouble("price"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Search for a drug by ID in the database
+    public Drug searchDrugByID(String drugID) {
+        if (!isConnected()) {
+            System.out.println("No database connection.");
+            return null;
+        }
+        
+        String query = "SELECT * FROM Drugs WHERE drugID = ?";
+        try (PreparedStatement stmt = connect
+        ion.prepareStatement(query)) {
+            stmt.setString(1, drugID);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return new Drug(
+                            rs.getString("drugID"),
+                            rs.getString("name"),
+                            rs.getString("type"),
+                            rs.getInt("quantity"),
+                            rs.getDouble("price")
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Drug not found.");
+        return null;
+    }
+
+    // Delete a drug by ID from the database
+    public boolean deleteDrugByID(String drugID) {
+        if (!isConnected()) {
+            System.out.println("No database connection.");
+            return false;
+        }
+        
+        String query = "DELETE FROM Drugs WHERE drugID = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, drugID);
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Drug deleted successfully.");
+                return true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        System.out.println("Drug not found.");
+        return false;
+    }
+}
+
+// Main class to run the program
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        DrugManagementSystem dms = new DrugManagementSystem();
+
+        while (true) {
+            System.out.println("\n--- Drug Management System ---");
+            System.out.println("1. Add Drug");
+            System.out.println("2. View Drugs");
+            System.out.println("3. Search Drug by ID");
+            System.out.println("4. Delete Drug by ID");
+            System.out.println("5. Exit");
+            System.out.print("Choose an option: ");
+            int choice = scanner.nextInt();
+            scanner.nextLine();  // Consume newline
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter Drug ID: ");
+                    String id = scanner.nextLine();
+                    System.out.print("Enter Drug Name: ");
+                    String name = scanner.nextLine();
+                    System.out.print("Enter Drug Type: ");
+                    String type = scanner.nextLine();
+                    System.out.print("Enter Quantity: ");
+                    int quantity = scanner.nextInt();
+                    System.out.print("Enter Price: ");
+                    double price = scanner.nextDouble();
+
+                    Drug drug = new Drug(id, name, type, quantity, price);
+                    dms.addDrug(drug);
+                    break;
+
+                case 2:
+                    System.out.println("\n--- List of Drugs ---");
+                    dms.viewDrugs();
+                    break;
+
+                case 3:
+                    System.out.print("Enter Drug ID to search: ");
+                    String searchID = scanner.nextLine();
+                    Drug foundDrug = dms.searchDrugByID(searchID);
+                    if (foundDrug != null) {
+                        System.out.println("Drug Found: " + foundDrug);
+                    } else {
+                        System.out.println("Drug not found.");
+                    }
+                    break;
+
+                case 4:
+                    System.out.print("Enter Drug ID to delete: ");
+                    String deleteID = scanner.nextLine();
+                    dms.deleteDrugByID(deleteID);
+                    break;
+
+                case 5:
+                    System.out.println("Exiting the system.");
+                    scanner.close();
+                    return;
+
+                default:
+                    System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+}
